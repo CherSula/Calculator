@@ -16,8 +16,12 @@ namespace Calculator
         private Dictionary<string, double> _prices = new Dictionary<string, double>();
         private List<string> _researchNames = new List<string>();
 
+        private DataTable _analysisData;
+
         public Form1()
         {
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+
             InitializeComponent();
 
             // Подписываемся на событие CellValueChanged
@@ -39,6 +43,14 @@ namespace Calculator
 #if DEBUG
             ReserchExcells();
 #endif
+            _analysisData = new DataTable();
+            _analysisData.Columns.Add("Исследование", typeof(string));
+            _analysisData.Columns.Add("Показатели", typeof(string));
+            _analysisData.Columns.Add("Стоимость исследования", typeof(float));
+
+            dataGridView2.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dataGridView2.DataSource = _analysisData;
+            dataGridView2.Columns["Показатели"].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         }
 
         private void ReserchExcells()
@@ -140,7 +152,7 @@ namespace Calculator
                 for (int row = 1; row <= sheet.LastRowNum; row++) // Пропускаем заголовок
                 {
                     var nameCell = sheet.GetRow(row)?.GetCell(0); // Столбец A
-                    var priceCellFinal = sheet.GetRow(row)?.GetCell(1); // Столбец D
+                    var priceCellFinal = sheet.GetRow(row)?.GetCell(1); // Столбец D !!!!!!!!!!
 
 
                     if (nameCell != null && priceCellFinal != null)
@@ -162,13 +174,57 @@ namespace Calculator
         {
             MessageBox.Show($"Количество уникальных показателей: {_indicators.Count}");
 
-            dataGridView1.Rows.Clear();
+            var uniqueParameters = new DataTable();
+            uniqueParameters.Rows.Clear();
 
-            dataGridView1.Columns.Add("parameter", "Показатель");
-            dataGridView1.Columns.Add("count", "Кол-во");
-            dataGridView1.Columns.Add("eachCost", "Цена за шт");
-            dataGridView1.Columns.Add("coefficient", "Коэффициент");
-            dataGridView1.Columns.Add("cost", "Цена показателя всего");
+            uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Показатель",
+                    ReadOnly = true,
+                }
+             );
+
+            uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Кол-во",
+                    ReadOnly = true
+                }
+             );
+
+            uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Цена за шт",
+                    ReadOnly = true
+                }
+             );
+
+            uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Коэффициент",
+                    ReadOnly = false
+                }
+             );
+            
+            uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Расход за показатель",
+                    ReadOnly = true
+                }
+             );
+            uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Цена показателя для клиента"
+                }
+             );
+
+            dataGridView1.DataSource = uniqueParameters;
+            dataGridView1.Columns["Цена показателя для клиента"].ReadOnly = true;
 
             foreach (var pair in _indicators)
             {
@@ -177,11 +233,12 @@ namespace Calculator
                 {
                     double eachCost = priceFinal; // Получаем цену за единицу
                     double count = pair.Value; // Количество показателя
-                    double coefficient = 1; // Здесь вы можете установить коэффициент по умолчанию или получить его из другого источника
+                    double coefficient = 1; // коэффициент по умолчанию
+                    double expend = priceFinal * count; // Расход за показатель
                     double cost = count * coefficient * eachCost; // Расчет стоимости
 
                     // Добавляем строку с данными
-                    dataGridView1.Rows.Add(pair.Key, count, eachCost, coefficient, cost);
+                    uniqueParameters.Rows.Add(pair.Key, count, eachCost, coefficient, expend, cost);
                 }
                 else
                 {
@@ -204,7 +261,7 @@ namespace Calculator
             //    вызываем мессаге бокс и говорим где пользователь ошибся
             // }
             // Проверяем, что измененная ячейка - это столбец коэффициента
-            if (e.ColumnIndex == dataGridView1.Columns["coefficient"].Index && e.RowIndex < 0)
+            if (e.ColumnIndex == dataGridView1.Columns["Коэффициент"].Index && e.RowIndex < 0)
             {
                 MessageBox.Show("Коэффициент не может быть меньше нуля");
             }
@@ -213,7 +270,7 @@ namespace Calculator
                 MessageBox.Show("Коэффициент не может быть пустым. Устанавливается значение по умолчанию: 1.");
                 dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = 1; // Устанавливаем значение по умолчанию
             }
-            if (e.ColumnIndex == dataGridView1.Columns["coefficient"].Index && e.RowIndex >= 0)
+            if (e.ColumnIndex == dataGridView1.Columns["Коэффициент"].Index && e.RowIndex >= 0)
             {
                 // Получаем новое значение коэффициента
                 if (double.TryParse(dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value.ToString(), out double newCoefficient))
@@ -224,16 +281,15 @@ namespace Calculator
                         dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = 1; // Устанавливаем значение по умолчанию
                     }
                     // Получаем количество и цену за единицу из текущей строки
-                    double count = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["count"].Value);
-                    double eachCost = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["eachCost"].Value);
+                    double count = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Кол-во"].Value);
+                    double eachCost = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Цена за шт"].Value);
 
                     // Пересчитываем стоимость
                     double newCost = count * newCoefficient * eachCost;
 
                     // Обновляем значение стоимости в DataGridView
-                    dataGridView1.Rows[e.RowIndex].Cells["cost"].Value = newCost;
+                    dataGridView1.Rows[e.RowIndex].Cells["Цена показателя для клиента"].Value = newCost;
                     // Если значение пустое, устанавливаем его обратно на 1 (или любое другое значение по умолчанию)
-
                 }
             }
         }
@@ -251,7 +307,9 @@ namespace Calculator
             //        row.Cells[2].Value = totalCostPerIndicator; // Устанавливаем стоимость в третью колонку
             //    }
             //}
-
+            _analysisData.Rows.Add("d", "j\r\np\r\no", 8);
+            //"qwer" + Environment.NewLine
+            //string.Join(Environment.NewLine, parametsOfOneAnalisis);
             MessageBox.Show("Стоимость рассчитана.");
         }
 
