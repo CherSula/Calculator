@@ -6,14 +6,16 @@ using System.Windows.Forms;
 using NPOI.HSSF.UserModel; // Для .xls
 using NPOI.XSSF.UserModel; // Для .xlsx
 using NPOI.SS.UserModel;
+using System.Linq;
 
 namespace Calculator
 {
     public partial class Form1 : Form
     {
-        private Dictionary<string, double> _indicators = new Dictionary<string, double>();
-        private Dictionary<string, double> _prices = new Dictionary<string, double>();
-        private List<string> _researchNames = new List<string>();
+        private Dictionary<string, List<string>> _analysisIndicatorsMap = new Dictionary<string, List<string>>();
+        
+        private Dictionary<string, double> _indicatorsCount = new Dictionary<string, double>();
+        private Dictionary<string, double> _indicatorsPrices = new Dictionary<string, double>();
 
         private DataTable _analysisData;
         private DataTable _uniqueParameters;
@@ -137,7 +139,7 @@ namespace Calculator
 
         private void btnLoadResearch_Click(object sender, EventArgs e)
         {
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            using (var openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.Filter = "Excel Files|*.xls;*.xlsx";
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
@@ -158,40 +160,42 @@ namespace Calculator
                 for (int i = 0; i < workbook.NumberOfSheets; i++)
                 {
                     var sheet = workbook.GetSheetAt(i);
-                    string researchName = sheet.SheetName;
+                    string analysisName = sheet.SheetName;
+                    var indicators = new List<string>();
                     
                     if (sheet.SheetName == "Все показатели")
                     {
                         continue;
                     }
 
-                    if (!_researchNames.Contains(researchName))
-                    {
-                        _researchNames.Add(researchName);
-                    }
-
                     for (int row = 0; row <= sheet.LastRowNum; row++)
                     {
                         var cell = sheet.GetRow(row)?.GetCell(0); // Столбец A
-                        if (cell != null)
+                        if (cell == null)
                         {
-                            string indicatorName = cell.ToString();
+                            continue;
+                        }
 
-                            if (string.IsNullOrWhiteSpace(indicatorName))
-                            {
-                                continue;
-                            }
+                        string indicatorName = cell.ToString();
 
-                            if (_indicators.ContainsKey(indicatorName))
-                            {
-                                _indicators[indicatorName] += 1;
-                            }
-                            else
-                            {
-                                _indicators[indicatorName] = 1;
-                            }
+                        if (string.IsNullOrWhiteSpace(indicatorName))
+                        {
+                            continue;
+                        }
+
+                        indicators.Add(indicatorName);
+
+                        if (_indicatorsCount.ContainsKey(indicatorName))
+                        {
+                            _indicatorsCount[indicatorName] += 1;
+                        }
+                        else
+                        {
+                            _indicatorsCount[indicatorName] = 1;
                         }
                     }
+
+                    _analysisIndicatorsMap.Add(analysisName, indicators);
                 }
             }
         }
@@ -231,7 +235,7 @@ namespace Calculator
 
                         if (double.TryParse(priceCellFinal.ToString(), out priceFinal))
                         {
-                            _prices[indicatorName] = priceFinal;
+                            _indicatorsPrices[indicatorName] = priceFinal;
                         }
                     }
                 }
@@ -240,10 +244,10 @@ namespace Calculator
 
         private void btnShowUniqueIndicators_Click(object sender, EventArgs e)
         {
-            foreach (var pair in _indicators)
+            foreach (var pair in _indicatorsCount)
             {
                 // Проверяем, существует ли цена для данного показателя
-                if (_prices.TryGetValue(pair.Key, out var priceFinal))
+                if (_indicatorsPrices.TryGetValue(pair.Key, out var priceFinal))
                 {
                     double eachCost = priceFinal; // Получаем цену за единицу
                     double count = pair.Value; // Количество показателя
@@ -305,20 +309,15 @@ namespace Calculator
 
         private void btnCalculateCost_Click(object sender, EventArgs e)
         {
-
-            //foreach (DataGridViewRow row in dataGridView.Rows)
-            //{
-            //    string indicatorName = row.Cells[0].Value.ToString();
-
-            //    if (prices.ContainsKey(indicatorName) && double.TryParse(row.Cells[1].Value.ToString(), out double coefficient))
-            //    {
-            //        double totalCostPerIndicator = prices[indicatorName] * coefficient;
-            //        row.Cells[2].Value = totalCostPerIndicator; // Устанавливаем стоимость в третью колонку
-            //    }
-            //}
-            _analysisData.Rows.Add("d", "j\r\np\r\no", 8);
-            //"qwer" + Environment.NewLine
+            // _analysisData.Rows.Add("d", "j\r\np\r\no", 8);
+            // "qwer" + Environment.NewLine
             //string.Join(Environment.NewLine, parametsOfOneAnalisis);
+
+            foreach (var pair in _analysisIndicatorsMap)
+            {
+                _analysisData.Rows.Add(pair.Key, string.Join(Environment.NewLine, pair.Value), 0);
+            }
+
             MessageBox.Show("Стоимость рассчитана.");
         }
 
