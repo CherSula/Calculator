@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.Linq;
 using System.Windows.Forms;
 using NPOI.HSSF.UserModel; // Для .xls
 using NPOI.XSSF.UserModel; // Для .xlsx
@@ -17,6 +16,7 @@ namespace Calculator
         private List<string> _researchNames = new List<string>();
 
         private DataTable _analysisData;
+        private DataTable _uniqueParameters;
 
         public Form1()
         {
@@ -43,6 +43,76 @@ namespace Calculator
 #if DEBUG
             ReserchExcells();
 #endif
+
+            InitializeUniqueParametersSheet();
+            InitializeAnalysisDataSheet();
+         }
+
+        private void InitializeUniqueParametersSheet()
+        {
+            _uniqueParameters = new DataTable();
+            _uniqueParameters.Rows.Clear();
+
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Показатель",
+                    ReadOnly = true,
+                }
+             );
+
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Кол-во",
+                    ReadOnly = true
+                }
+             );
+
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Цена за шт",
+                    ReadOnly = true
+                }
+             );
+
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Коэффициент",
+                    ReadOnly = false
+                }
+             );
+
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Расход за показатель",
+                    ReadOnly = true
+                }
+             );
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Цена показателя для клиента"
+                }
+             );
+
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Маржинальность"
+                }
+             );
+
+            dataGridView1.DataSource = _uniqueParameters;
+            dataGridView1.Columns["Цена показателя для клиента"].ReadOnly = true;
+            dataGridView1.Columns["Маржинальность"].ReadOnly = true;
+        }
+
+        private void InitializeAnalysisDataSheet()
+        {
             _analysisData = new DataTable();
             _analysisData.Columns.Add("Исследование", typeof(string));
             _analysisData.Columns.Add("Показатели", typeof(string));
@@ -52,7 +122,7 @@ namespace Calculator
             dataGridView2.DataSource = _analysisData;
             dataGridView2.Columns["Показатели"].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         }
-
+       
         private void ReserchExcells()
         {
             var researchPath = @"C:\Users\svetl\Desktop\Маша\sheet\analysis-parameter.xlsx";
@@ -77,7 +147,6 @@ namespace Calculator
                 }
             }
         }
-
 
         private void LoadResearch(string filePath)
         {
@@ -169,71 +238,8 @@ namespace Calculator
             }
         }
 
-
         private void btnShowUniqueIndicators_Click(object sender, EventArgs e)
         {
-            // MessageBox.Show($"Количество уникальных показателей: {_indicators.Count}");
-
-            var uniqueParameters = new DataTable();
-            uniqueParameters.Rows.Clear();
-
-            uniqueParameters.Columns.Add(
-                new DataColumn()
-                {
-                    ColumnName = "Показатель",
-                    ReadOnly = true,
-                }
-             );
-
-            uniqueParameters.Columns.Add(
-                new DataColumn()
-                {
-                    ColumnName = "Кол-во",
-                    ReadOnly = true
-                }
-             );
-
-            uniqueParameters.Columns.Add(
-                new DataColumn()
-                {
-                    ColumnName = "Цена за шт",
-                    ReadOnly = true
-                }
-             );
-
-            uniqueParameters.Columns.Add(
-                new DataColumn()
-                {
-                    ColumnName = "Коэффициент",
-                    ReadOnly = false
-                }
-             );
-            
-            uniqueParameters.Columns.Add(
-                new DataColumn()
-                {
-                    ColumnName = "Расход за показатель",
-                    ReadOnly = true
-                }
-             );
-            uniqueParameters.Columns.Add(
-                new DataColumn()
-                {
-                    ColumnName = "Цена показателя для клиента"
-                }
-             );
-
-            uniqueParameters.Columns.Add(
-                new DataColumn()
-                {
-                    ColumnName = "Маржинальность"
-                }
-             );
-
-            dataGridView1.DataSource = uniqueParameters;
-            dataGridView1.Columns["Цена показателя для клиента"].ReadOnly = true;
-            dataGridView1.Columns["Маржинальность"].ReadOnly = true;
-
             foreach (var pair in _indicators)
             {
                 // Проверяем, существует ли цена для данного показателя
@@ -247,7 +253,7 @@ namespace Calculator
                     double marge = cost - expend; // Маржинальность
 
                     // Добавляем строку с данными
-                    uniqueParameters.Rows.Add(pair.Key, count, eachCost, coefficient, expend, cost, marge);
+                    _uniqueParameters.Rows.Add(pair.Key, count, eachCost, coefficient, expend, cost, marge);
                 }
                 else
                 {
@@ -297,9 +303,9 @@ namespace Calculator
             dataGridView1.Rows[e.RowIndex].Cells["Маржинальность"].Value = newMarge;
         }
 
-
         private void btnCalculateCost_Click(object sender, EventArgs e)
         {
+
             //foreach (DataGridViewRow row in dataGridView.Rows)
             //{
             //    string indicatorName = row.Cells[0].Value.ToString();
@@ -320,6 +326,5 @@ namespace Calculator
         {
             MessageBox.Show("Итоговая стоимость заказа - ");
         }
-
     }
 }
