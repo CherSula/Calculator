@@ -172,7 +172,7 @@ namespace Calculator
 
         private void btnShowUniqueIndicators_Click(object sender, EventArgs e)
         {
-            MessageBox.Show($"Количество уникальных показателей: {_indicators.Count}");
+            // MessageBox.Show($"Количество уникальных показателей: {_indicators.Count}");
 
             var uniqueParameters = new DataTable();
             uniqueParameters.Rows.Clear();
@@ -223,8 +223,16 @@ namespace Calculator
                 }
              );
 
+            uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
+                    ColumnName = "Маржинальность"
+                }
+             );
+
             dataGridView1.DataSource = uniqueParameters;
             dataGridView1.Columns["Цена показателя для клиента"].ReadOnly = true;
+            dataGridView1.Columns["Маржинальность"].ReadOnly = true;
 
             foreach (var pair in _indicators)
             {
@@ -236,9 +244,10 @@ namespace Calculator
                     double coefficient = 1; // коэффициент по умолчанию
                     double expend = priceFinal * count; // Расход за показатель
                     double cost = count * coefficient * eachCost; // Расчет стоимости
+                    double marge = cost - expend; // Маржинальность
 
                     // Добавляем строку с данными
-                    uniqueParameters.Rows.Add(pair.Key, count, eachCost, coefficient, expend, cost);
+                    uniqueParameters.Rows.Add(pair.Key, count, eachCost, coefficient, expend, cost, marge);
                 }
                 else
                 {
@@ -274,12 +283,18 @@ namespace Calculator
             // Получаем количество и цену за единицу из текущей строки
             double count = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Кол-во"].Value);
             double eachCost = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Цена за шт"].Value);
+            double expend = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Расход за показатель"].Value);
 
             // Пересчитываем стоимость
             double newCost = count * coeff * eachCost;
+            //double expend = priceFinal * count;
+            double newMarge = newCost - expend;
 
             // Обновляем значение стоимости в DataGridView
             dataGridView1.Rows[e.RowIndex].Cells["Цена показателя для клиента"].Value = newCost;
+
+            // Новая маржинальность
+            dataGridView1.Rows[e.RowIndex].Cells["Маржинальность"].Value = newMarge;
         }
 
 
@@ -305,5 +320,6 @@ namespace Calculator
         {
             MessageBox.Show("Итоговая стоимость заказа - ");
         }
+
     }
 }
