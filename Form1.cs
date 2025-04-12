@@ -361,10 +361,8 @@ namespace Calculator
 
                 foreach (var indicator in indicators) // расчет доходов (стоимости исследования)
                 {
-                    // Проходим по всем строкам в _uniqueParameters
                     foreach (DataGridViewRow row in dataGridView1.Rows)
                     {
-                        // Проверяем, соответствует ли показатель
                         if (row.Cells["Показатель"].Value != null && row.Cells["Показатель"].Value.ToString() == indicator)
                         {
                             double eachCost = Convert.ToDouble(row.Cells["Цена за шт. для клиента"].Value);
@@ -384,7 +382,15 @@ namespace Calculator
 
         private void btnTotalSumForOrder_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Итоговая стоимость заказа - ");
+            double totalSum = 0;
+
+            foreach (DataGridViewRow row in dataGridView2.Rows)
+            {
+                double eachCost = Convert.ToDouble(row.Cells["Стоимость исследования"].Value);
+                totalSum += eachCost;
+            }
+
+            MessageBox.Show($"Итоговая стоимость заказа - '{totalSum} рублей без НДС'");
         }
     }
 }
