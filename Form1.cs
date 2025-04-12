@@ -66,7 +66,7 @@ namespace Calculator
             _uniqueParameters.Columns.Add(
                 new DataColumn()
                 {
-                    ColumnName = "Кол-во",
+                    ColumnName = "Цена за шт",
                     ReadOnly = true
                 }
              );
@@ -74,7 +74,7 @@ namespace Calculator
             _uniqueParameters.Columns.Add(
                 new DataColumn()
                 {
-                    ColumnName = "Цена за шт",
+                    ColumnName = "Кол-во",
                     ReadOnly = true
                 }
              );
@@ -90,14 +90,22 @@ namespace Calculator
             _uniqueParameters.Columns.Add(
                 new DataColumn()
                 {
+                    ColumnName = "Цена за шт. для клиента",
+                }
+             );
+
+            _uniqueParameters.Columns.Add(
+                new DataColumn()
+                {
                     ColumnName = "Расход за показатель",
                     ReadOnly = true
                 }
              );
+
             _uniqueParameters.Columns.Add(
                 new DataColumn()
                 {
-                    ColumnName = "Цена показателя для клиента"
+                    ColumnName = "Цена для клиента за показатель всего"
                 }
              );
 
@@ -108,8 +116,11 @@ namespace Calculator
                 }
              );
 
+            dataGridView1.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
             dataGridView1.DataSource = _uniqueParameters;
-            dataGridView1.Columns["Цена показателя для клиента"].ReadOnly = true;
+            dataGridView1.Columns["Цена за шт. для клиента"].ReadOnly = true;
+            dataGridView1.Columns["Цена для клиента за показатель всего"].ReadOnly = true;
             dataGridView1.Columns["Маржинальность"].ReadOnly = true;
         }
 
@@ -118,11 +129,19 @@ namespace Calculator
             _analysisData = new DataTable();
             _analysisData.Columns.Add("Исследование", typeof(string));
             _analysisData.Columns.Add("Показатели", typeof(string));
+            _analysisData.Columns.Add("Расходы на исследование", typeof(float));
             _analysisData.Columns.Add("Стоимость исследования", typeof(float));
+            _analysisData.Columns.Add("Маржинальность исследования", typeof(float));
 
             dataGridView2.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+            dataGridView2.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
             dataGridView2.DataSource = _analysisData;
             dataGridView2.Columns["Показатели"].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dataGridView2.Columns["Исследование"].ReadOnly = true;
+            dataGridView2.Columns["Показатели"].ReadOnly = true;
+            dataGridView2.Columns["Расходы на исследование"].ReadOnly = true;
+            dataGridView2.Columns["Стоимость исследования"].ReadOnly = true;
+            dataGridView2.Columns["Маржинальность исследования"].ReadOnly = true;
         }
        
         private void ReserchExcells()
@@ -253,11 +272,12 @@ namespace Calculator
                     double count = pair.Value; // Количество показателя
                     double coefficient = 1; // коэффициент по умолчанию
                     double expend = priceFinal * count; // Расход за показатель
+                    double eachCostClient = eachCost * coefficient;
                     double cost = count * coefficient * eachCost; // Расчет стоимости
-                    double marge = cost - expend; // Маржинальность
+                    double margin = cost - expend; // Маржинальность
 
                     // Добавляем строку с данными
-                    _uniqueParameters.Rows.Add(pair.Key, count, eachCost, coefficient, expend, cost, marge);
+                    _uniqueParameters.Rows.Add(pair.Key, eachCost, count, coefficient, eachCostClient, expend, cost, margin);
                 }
                 else
                 {
@@ -266,7 +286,6 @@ namespace Calculator
             }
         }
 
-        // Обработчик события изменения значения ячейки
         private void dataGridView1_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
             if (e.ColumnIndex != dataGridView1.Columns["Коэффициент"].Index)
@@ -297,25 +316,67 @@ namespace Calculator
 
             // Пересчитываем стоимость
             double newCost = count * coeff * eachCost;
-            //double expend = priceFinal * count;
-            double newMarge = newCost - expend;
+            double newEachCostClient = coeff * eachCost;
+            double newMargin = newCost - expend;
 
-            // Обновляем значение стоимости в DataGridView
-            dataGridView1.Rows[e.RowIndex].Cells["Цена показателя для клиента"].Value = newCost;
-
-            // Новая маржинальность
-            dataGridView1.Rows[e.RowIndex].Cells["Маржинальность"].Value = newMarge;
+            dataGridView1.Rows[e.RowIndex].Cells["Цена за шт. для клиента"].Value = newEachCostClient;
+            dataGridView1.Rows[e.RowIndex].Cells["Цена для клиента за показатель всего"].Value = newCost;
+            dataGridView1.Rows[e.RowIndex].Cells["Маржинальность"].Value = newMargin;
         }
 
         private void btnCalculateCost_Click(object sender, EventArgs e)
         {
-            // _analysisData.Rows.Add("d", "j\r\np\r\no", 8);
-            // "qwer" + Environment.NewLine
-            //string.Join(Environment.NewLine, parametsOfOneAnalisis);
-
             foreach (var pair in _analysisIndicatorsMap)
             {
-                _analysisData.Rows.Add(pair.Key, string.Join(Environment.NewLine, pair.Value), 0);
+                string analysisName = pair.Key; // Название исследования
+                var indicators = pair.Value; // Список показателей для данного исследования
+
+                double totalExpend = 0; // общие расходы (цена лаборатории)
+                double totalCost = 0; // общая стоимость
+
+                foreach (var indicator in indicators) // расчет расходов
+                {
+                    if (_indicatorsPrices.TryGetValue(indicator, out var priceFinal))
+                    {
+                        totalExpend += priceFinal;
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Цена для показателя '{indicator}' не найдена.");
+                    }
+                }
+
+                //foreach (var indicator in indicators) // расчет доходов (стоимости исследования)
+                //{
+                //    if (_uniqueParameters.Rows[].Cells["Показатель"].Value == indicator)
+                //    {
+                //        double eachCost = Convert.ToDouble(_uniqueParameters.Rows[].Cells["Цена за шт. для клиента"].Value);
+                //        totalCost += eachCost;
+                //    }
+                //    else
+                //    {
+                //        MessageBox.Show($"Цена для показателя '{indicator}' не найдена.");
+                //    }
+                //}
+
+                foreach (var indicator in indicators) // расчет доходов (стоимости исследования)
+                {
+                    // Проходим по всем строкам в _uniqueParameters
+                    foreach (DataGridViewRow row in dataGridView1.Rows)
+                    {
+                        // Проверяем, соответствует ли показатель
+                        if (row.Cells["Показатель"].Value != null && row.Cells["Показатель"].Value.ToString() == indicator)
+                        {
+                            double eachCost = Convert.ToDouble(row.Cells["Цена за шт. для клиента"].Value);
+                            totalCost += eachCost;
+
+                        }
+                    }
+                 }
+
+                    double totalMarge = totalCost - totalExpend;
+
+                _analysisData.Rows.Add(analysisName, string.Join(Environment.NewLine, indicators), totalExpend, totalCost, totalMarge);
             }
 
             MessageBox.Show("Стоимость рассчитана.");
