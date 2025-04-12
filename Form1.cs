@@ -250,48 +250,36 @@ namespace Calculator
         // Обработчик события изменения значения ячейки
         private void dataGridView1_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            // if (измененная ячейка не относится к столбцу coefficient)
-            // {
-            //     return;
-            // }
-
-            // if (значение ячейки не число или меньше нуля)
-            // {
-            //    присваиваем дефолтное значение
-            //    вызываем мессаге бокс и говорим где пользователь ошибся
-            // }
-            // Проверяем, что измененная ячейка - это столбец коэффициента
-            if (e.ColumnIndex == dataGridView1.Columns["Коэффициент"].Index && e.RowIndex < 0)
+            if (e.ColumnIndex != dataGridView1.Columns["Коэффициент"].Index)
             {
-                MessageBox.Show("Коэффициент не может быть меньше нуля");
+                return;
             }
-            if (string.IsNullOrWhiteSpace(dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value?.ToString()))
-            {
-                MessageBox.Show("Коэффициент не может быть пустым. Устанавливается значение по умолчанию: 1.");
-                dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = 1; // Устанавливаем значение по умолчанию
-            }
-            if (e.ColumnIndex == dataGridView1.Columns["Коэффициент"].Index && e.RowIndex >= 0)
-            {
-                // Получаем новое значение коэффициента
-                if (double.TryParse(dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value.ToString(), out double newCoefficient))
-                {
-                    if (string.IsNullOrWhiteSpace(dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value?.ToString()))
-                    {
-                        MessageBox.Show("Коэффициент не может быть пустым. Устанавливается значение по умолчанию: 1.");
-                        dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = 1; // Устанавливаем значение по умолчанию
-                    }
-                    // Получаем количество и цену за единицу из текущей строки
-                    double count = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Кол-во"].Value);
-                    double eachCost = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Цена за шт"].Value);
 
-                    // Пересчитываем стоимость
-                    double newCost = count * newCoefficient * eachCost;
+            string cellValue = dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value.ToString();
+            float coeff = 0;
 
-                    // Обновляем значение стоимости в DataGridView
-                    dataGridView1.Rows[e.RowIndex].Cells["Цена показателя для клиента"].Value = newCost;
-                    // Если значение пустое, устанавливаем его обратно на 1 (или любое другое значение по умолчанию)
-                }
+            if (float.TryParse(cellValue, out coeff) == false)
+            {
+                MessageBox.Show("Коэффициент должен быть числом.\nУстанавливается значение по умолчанию: 1.");
+                dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = 1;
+                return;
             }
+
+            if (coeff < 0)
+            {
+                MessageBox.Show("Коэффициент не может быть меньше нуля.\nУстанавливается значение по умолчанию: 1.");
+                dataGridView1.Rows[e.RowIndex].Cells[e.ColumnIndex].Value = 1;
+                return;
+            }
+            // Получаем количество и цену за единицу из текущей строки
+            double count = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Кол-во"].Value);
+            double eachCost = Convert.ToDouble(dataGridView1.Rows[e.RowIndex].Cells["Цена за шт"].Value);
+
+            // Пересчитываем стоимость
+            double newCost = count * coeff * eachCost;
+
+            // Обновляем значение стоимости в DataGridView
+            dataGridView1.Rows[e.RowIndex].Cells["Цена показателя для клиента"].Value = newCost;
         }
 
 
